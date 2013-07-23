@@ -143,6 +143,39 @@ public class Atom_CUBE  : MonoBehaviour {
         return true;
     }
 
+
+    //Resample cube by different size
+    public static bool CUBE2CUBE (Cubemap cube1, Cubemap cube2, int channel = 0, bool mipmap = false ){
+
+        if(cube1.width == cube2.width) {
+
+            for(int n = 0; n < 6; n++){
+                cube2.SetPixels(cube1.GetPixels((CubemapFace)n), (CubemapFace)n);
+            }
+            cube2.Apply(mipmap);
+            return true;
+            
+        }
+
+        bool hasMipMap = cube1.mipmapCount > 0 ? true : false;
+        Texture2D faceTex1 = new Texture2D(cube1.width, cube1.height, cube1.format, hasMipMap);
+        Texture2D faceTex2 = (Texture2D)Instantiate (faceTex1);
+        //Texture2D faceTex2 = new Texture2D(cube2.width, cube2.height, cube1.format, hasMipMap);
+
+        for(int n = 0; n < 6; n++){
+
+            SetCUBEFace2Tex(cube1, (CubemapFace)n, faceTex1, mipmap);
+
+            Atom_Texture.Bilinear (faceTex2, tex2.width, tex2.height);
+
+            SetTex2CUBEFace(faceTex2, cube2, (CubemapFace)n, mipmap);
+
+        }
+        
+
+        return true;
+    }
+
     
 
 
@@ -289,7 +322,7 @@ public class Atom_CUBE  : MonoBehaviour {
         return VEC.normalized;
 
     }
-    public static Color GetCUBESampleColor_Diffuse (Cubemap cube, Vector3 dir, float range, float step, Vector3 info) {
+    public static Color GetCUBEConvolution (Cubemap cube, Vector3 dir, float range, float stepPixel, Vector3 info) {
 
         Color col = new Color(0,0,0,1);
         Vector4 result = new Vector4(0,0,0,1);
@@ -341,7 +374,7 @@ public class Atom_CUBE  : MonoBehaviour {
         //float U,V = 0;
         if (cube.width == filterCube.width && cube.height == filterCube.height && cube.format == filterCube.format) {
 
-            if(range == 0 || step == 1.0f) {
+            if(range <= 0.001f || step == 1.0f) {
                 for(int n = 0; n < 6; n++){
                     filterCube.SetPixels(cube.GetPixels((CubemapFace)n), (CubemapFace)n);
                 }
@@ -352,7 +385,7 @@ public class Atom_CUBE  : MonoBehaviour {
                     for (int y=0; y < filterCube.height; y++) {
                         for(int x=0; x < filterCube.width; x++) {
                             
-                            colFilter = GetCUBESampleColor_Diffuse(cube, GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n), range, step, new Vector3(x,y,(float)n));
+                            colFilter = GetCUBEConvolution(cube, GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n), range, step, new Vector3(x,y,(float)n));
                             //colFilter.r = GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n).x;
                             //colFilter.g = GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n).y;
                             //colFilter.b = GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n).z;
@@ -418,6 +451,47 @@ public class Atom_CUBE  : MonoBehaviour {
 
         DestroyImmediate(tex);
 
+        return true;
+    }
+
+    public static bool SetCUBEFace2Tex (Cubemap cube, CubemapFace face, Texture2D tex, bool mipmap = false){
+        if(cube.width != cube.height){
+            Debug.LogError("The cubemap size error!");
+            return false;
+        }
+
+        if(tex.width == cube.width && tex.height  == cube.height){ // Size check
+
+            tex.SetPixels ((Color[]) cube.GetPixels(face) ); 
+
+            tex.Apply(mipmap);
+        }
+        else{
+            Debug.LogError("The texture size is not as same as cube face size!");
+            return false;
+        }
+        
+        return true;
+    }
+
+
+    public static bool SetTex2CUBEFace (Texture2D tex, Cubemap cube, CubemapFace face, bool mipmap = false){
+        if(cube.width != cube.height){
+            Debug.LogError("The cubemap size error!");
+            return false;
+        }
+
+        if(tex.width == cube.width && tex.height  == cube.height){ // Size check
+
+            cube.SetPixels ((Color[]) tex.GetPixels(), face ); 
+
+            cube.Apply(mipmap);
+        }
+        else{
+            Debug.LogError("The texture size is not as same as cube face size!");
+            return false;
+        }
+        
         return true;
     }
 
