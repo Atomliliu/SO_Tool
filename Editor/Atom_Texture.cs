@@ -40,8 +40,8 @@ public class Atom_Texture
 		newColors = new Color[newWidth * newHeight];
 		if (useBilinear)
         {
-			ratioX = 1.0f / (float)newWidth / (tex.width-1);
-			ratioY = 1.0f / (float)newHeight / (tex.height-1);
+			ratioX = 1.0f / ((float)newWidth / (tex.width-1));
+			ratioY = 1.0f / ((float)newHeight / (tex.height-1));
 		}
 		else {
 			ratioX = ((float)tex.width) / newWidth;
@@ -69,6 +69,7 @@ public class Atom_Texture
 			threadData = new ThreadData(slice*i, newHeight);
 			if (useBilinear)
             {
+            	//PointScale(threadData);
 				BilinearScale(threadData);
 			}
 			else
@@ -85,6 +86,8 @@ public class Atom_Texture
 			ThreadData threadData = new ThreadData(0, newHeight);
 			if (useBilinear)
             {
+            	//PointScale(threadData);
+
 				BilinearScale(threadData);
 			}
 			else
