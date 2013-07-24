@@ -110,13 +110,20 @@ public class Atom_CUBE  : MonoBehaviour {
 
 
     //Copy texture1 to another texture2, it will resize texture to tex
-    public static bool Tex2Tex (Texture2D tex1, Texture2D tex2, int channel = 0, bool mipmap = false ){
+    public static bool Tex2Tex (Texture2D tex1, Texture2D tex2, int channel = 0, bool useBilinear = true, bool mipmap = false ){
         Texture2D dumyTex = (Texture2D)Instantiate (tex1);
 
         if(dumyTex.width != tex2.width || dumyTex.height != tex2.height){
             Debug.Log("Resize texture and copy it to preview.");
-            Atom_Texture.Point (dumyTex, tex2.width, tex2.height);
-            //Atom_Texture.Bilinear (dumyTex, tex2.width, tex2.height);
+
+            if(useBilinear) {
+                Atom_Texture.Bilinear (dumyTex, tex2.width, tex2.height);
+            }
+            else {
+                Atom_Texture.Point (dumyTex, tex2.width, tex2.height);
+            }
+            
+            
         }
     
         Debug.Log("Copy texture to preview.");
@@ -145,7 +152,7 @@ public class Atom_CUBE  : MonoBehaviour {
 
 
     //Resample cube by different size
-    public static bool CUBE2CUBE (Cubemap cube1, Cubemap cube2, bool mipmap = false ){
+    public static bool CUBE2CUBE (Cubemap cube1, Cubemap cube2, bool useBilinear = true, bool mipmap = false ){
 
         if(cube1.width == cube2.width) {
 
@@ -166,7 +173,12 @@ public class Atom_CUBE  : MonoBehaviour {
 
             SetCUBEFace2Tex(cube1, (CubemapFace)n, faceTex1, mipmap);
 
-            Atom_Texture.Bilinear (faceTex2, tex2.width, tex2.height);
+            if(useBilinear) {
+                Atom_Texture.Bilinear (faceTex2, tex2.width, tex2.height);
+            }
+            else {
+                Atom_Texture.Point (faceTex2, tex2.width, tex2.height);
+            }
 
             SetTex2CUBEFace(faceTex2, cube2, (CubemapFace)n, mipmap);
 
@@ -643,7 +655,7 @@ public static void test (Texture2D tex){
                     }
                     
                     
-                    Tex2Tex(texTmp, tex, channel);
+                    Tex2Tex(texTmp, tex, channel, false);
 
                 break;
 
@@ -710,7 +722,7 @@ public static void test (Texture2D tex){
                     }
                     
 
-                    Tex2Tex(texTmp, tex, channel);
+                    Tex2Tex(texTmp, tex, channel, false);
 
                 break;
 
@@ -779,7 +791,7 @@ public static void test (Texture2D tex){
                     }
                     
 
-                    Tex2Tex(texTmp, tex, channel);
+                    Tex2Tex(texTmp, tex, channel, false);
 
                 break;
 
@@ -838,7 +850,7 @@ public static void test (Texture2D tex){
                     
                     
 
-                    Tex2Tex(texTmp, tex, channel);
+                    Tex2Tex(texTmp, tex, channel, false);
 
                 break;
 
@@ -895,7 +907,7 @@ public static void test (Texture2D tex){
                     }
                     
 
-                    Tex2Tex(texTmp, tex, channel);
+                    Tex2Tex(texTmp, tex, channel, false);
 
                 break;
 
@@ -937,7 +949,7 @@ public static void test (Texture2D tex){
 
                     RT2TEX(rt, texTmp, linear, mipmap);
 
-                    Tex2Tex(texTmp, tex, channel);
+                    Tex2Tex(texTmp, tex, channel, false);
 
                     //rt = null;
                     //mat = null;
@@ -979,7 +991,7 @@ public static void test (Texture2D tex){
 
                     RT2TEX(rt, texTmp, linear, mipmap);
 
-                    Tex2Tex(texTmp, tex, channel);
+                    Tex2Tex(texTmp, tex, channel, false);
 
                 break;
 
