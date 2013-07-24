@@ -145,7 +145,7 @@ public class Atom_CUBE  : MonoBehaviour {
 
 
     //Resample cube by different size
-    public static bool CUBE2CUBE (Cubemap cube1, Cubemap cube2, int channel = 0, bool mipmap = false ){
+    public static bool CUBE2CUBE (Cubemap cube1, Cubemap cube2, bool mipmap = false ){
 
         if(cube1.width == cube2.width) {
 
@@ -322,17 +322,11 @@ public class Atom_CUBE  : MonoBehaviour {
         return VEC.normalized;
 
     }
-    public static Color GetCUBEConvolution (Cubemap cube, Vector3 dir, float range, float stepPixel, Vector3 info) {
+    public static Color GetCUBEConvolution (Cubemap cube, Vector3 dir, float range) {
 
         Color col = new Color(0,0,0,1);
         Vector4 result = new Vector4(0,0,0,1);
-        int stepPixel = 1;
-        if (step >= 1.0f) {
-            stepPixel = cube.width;
-        }
-        else {
-            stepPixel = Mathf.Max(1, (int)(step * cube.width));
-        }
+  
         range = 1- range; // from 0-1 to 1-0 (cos)
         //if(range <= 0.001f){
             //stepPixel = 1;
@@ -342,8 +336,8 @@ public class Atom_CUBE  : MonoBehaviour {
         //else{
             int sum = 1;
             for(int N = 0; N < 6; N++){
-                for(int Y = 0; Y < cube.height; Y += stepPixel){
-                    for(int X = 0; X < cube.width; X += stepPixel){
+                for(int Y = 0; Y < cube.height; Y++){
+                    for(int X = 0; X < cube.width; X++){
 
                         Vector3 vecSampler = GetFilterCUBEVec(GetUV((cube.width-1) - X, Y, cube.width, cube.height), N);
                         
@@ -369,33 +363,40 @@ public class Atom_CUBE  : MonoBehaviour {
         return col;
     }
 
-    public static bool FilterCUBE_Diffuse (Cubemap cube, Cubemap filterCube, float range, float step) {
+    public static bool FilterCUBE_Diffuse (Cubemap cube, Cubemap filterCube, float range, int size) {
 
         //float U,V = 0;
         if (cube.width == filterCube.width && cube.height == filterCube.height && cube.format == filterCube.format) {
 
-            if(range <= 0.001f || step == 1.0f) {
+            if(range <= 0.001f) {
                 for(int n = 0; n < 6; n++){
                     filterCube.SetPixels(cube.GetPixels((CubemapFace)n), (CubemapFace)n);
                 }
             }
             else {
+
+                Cubemap tmpCube = new Cubemap (size , cube.format, false);
+                Cubemap tmpFilterCube = new Cubemap (size , filterCube.format, false);
+                CUBE2CUBE (cube, tmpCube);
+
+
                 Color colFilter = new Color(0,0,0,1);
                 for(int n = 0; n < 6; n++){
-                    for (int y=0; y < filterCube.height; y++) {
-                        for(int x=0; x < filterCube.width; x++) {
+                    for (int y=0; y < size; y++) {
+                        for(int x=0; x < size; x++) {
                             
-                            colFilter = GetCUBEConvolution(cube, GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n), range, step, new Vector3(x,y,(float)n));
+                            colFilter = GetCUBEConvolution(tmpCube, GetFilterCUBEVec(GetUV((size-1) - x, y, size, size), n), range);
                             //colFilter.r = GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n).x;
                             //colFilter.g = GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n).y;
                             //colFilter.b = GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n).z;
-                            filterCube.SetPixel((CubemapFace)n, x, y, colFilter);
+                            tmpFilterCube.SetPixel((CubemapFace)n, x, y, colFilter);
                         }
                     }
                 }
             }
             
-            filterCube.Apply();
+            tmpFilterCube.Apply();
+            CUBE2CUBE (tmpFilterCube, filterCube);
             return true;
         }
         else {
