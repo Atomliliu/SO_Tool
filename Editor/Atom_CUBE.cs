@@ -164,8 +164,8 @@ public class Atom_CUBE  : MonoBehaviour {
             
         }
 
-        bool hasMipMap = cube1.mipmapCount > 0 ? true : false;
-        Texture2D faceTex1 = new Texture2D(cube1.width, cube1.height, cube1.format, hasMipMap);
+        //bool hasMipMap = cube1.mipmapCount() > 0 ? true : false;
+        Texture2D faceTex1 = new Texture2D(cube1.width, cube1.height, cube1.format, mipmap);
         Texture2D faceTex2 = (Texture2D)Instantiate (faceTex1);
         //Texture2D faceTex2 = new Texture2D(cube2.width, cube2.height, cube1.format, hasMipMap);
 
@@ -174,10 +174,10 @@ public class Atom_CUBE  : MonoBehaviour {
             SetCUBEFace2Tex(cube1, (CubemapFace)n, faceTex1, mipmap);
 
             if(useBilinear) {
-                Atom_Texture.Bilinear (faceTex2, tex2.width, tex2.height);
+                Atom_Texture.Bilinear (faceTex2, cube2.width, cube2.height);
             }
             else {
-                Atom_Texture.Point (faceTex2, tex2.width, tex2.height);
+                Atom_Texture.Point (faceTex2, cube2.width, cube2.height);
             }
 
             SetTex2CUBEFace(faceTex2, cube2, (CubemapFace)n, mipmap);
@@ -334,35 +334,53 @@ public class Atom_CUBE  : MonoBehaviour {
         return VEC.normalized;
 
     }
-    public static Color GetCUBEConvolution (Cubemap cube, Vector3 dir, float range) {
+    public static Color GetCUBEConvolution (Cubemap cube, Vector3 dir, float range, float power = 1.0f) {
 
         Color col = new Color(0,0,0,1);
         Vector4 result = new Vector4(0,0,0,1);
   
-        range = 1- range; // from 0-1 to 1-0 (cos)
+        //range = 1- range; // from 0-1 to 1-0 (cos)
         //if(range <= 0.001f){
             //stepPixel = 1;
 
         //    col = cube.GetPixel((CubemapFace)info.z, (int)info.x, (int)info.y);
         //}
         //else{
-            int sum = 1;
+            float sum = 0.0f;
             for(int N = 0; N < 6; N++){
                 for(int Y = 0; Y < cube.height; Y++){
                     for(int X = 0; X < cube.width; X++){
 
                         Vector3 vecSampler = GetFilterCUBEVec(GetUV((cube.width-1) - X, Y, cube.width, cube.height), N);
                         
-                        
-                        float power = Mathf.Max(0,Vector3.Dot(vecSampler, dir));
-                        if(power >= range){
-                            col = power * cube.GetPixel((CubemapFace)N, X, Y);
-                            result.x += col.r;
-                            result.y += col.g;
-                            result.z += col.b;
-                            result.w += col.a;
-                            sum++;
+                        if(range <= 0.01f || power <= 1.01f) { //Diffuse
+                            float weight = Mathf.Max(0,Vector3.Dot(vecSampler, dir));
+                            if(weight >= range){
+                                col = weight * cube.GetPixel((CubemapFace)N, X, Y);
+                                result.x += col.r;
+                                result.y += col.g;
+                                result.z += col.b;
+                                result.w += col.a;
+                                //sum++;
+                                sum += weight;
+                            }
                         }
+                        else { //Blur Specular
+                            float weight = Mathf.Max(0,Vector3.Dot(vecSampler, dir));
+                            weight = Mathf.Pow(weight,power);
+                            if(weight >= range){
+                                col = weight * cube.GetPixel((CubemapFace)N, X, Y);
+                                result.x += col.r;
+                                result.y += col.g;
+                                result.z += col.b;
+                                result.w += col.a;
+                                //sum++;
+                                sum += weight;
+                            }
+
+                        }
+                        
+                        
                         //col = new Color(1,0,0,1);
                     }
                 }
@@ -375,7 +393,7 @@ public class Atom_CUBE  : MonoBehaviour {
         return col;
     }
 
-    public static bool FilterCUBE_Diffuse (Cubemap cube, Cubemap filterCube, float range, int size) {
+    public static bool FilterCUBE_Diffuse (Cubemap cube, Cubemap filterCube, int size, float range, float power) {
 
         //float U,V = 0;
         if (cube.width == filterCube.width && cube.height == filterCube.height && cube.format == filterCube.format) {
@@ -384,6 +402,7 @@ public class Atom_CUBE  : MonoBehaviour {
                 for(int n = 0; n < 6; n++){
                     filterCube.SetPixels(cube.GetPixels((CubemapFace)n), (CubemapFace)n);
                 }
+                filterCube.Apply();
             }
             else {
 
@@ -397,18 +416,17 @@ public class Atom_CUBE  : MonoBehaviour {
                     for (int y=0; y < size; y++) {
                         for(int x=0; x < size; x++) {
                             
-                            colFilter = GetCUBEConvolution(tmpCube, GetFilterCUBEVec(GetUV((size-1) - x, y, size, size), n), range);
-                            //colFilter.r = GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n).x;
-                            //colFilter.g = GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n).y;
-                            //colFilter.b = GetFilterCUBEVec(GetUV((filterCube.width-1) - x, y, filterCube.width, filterCube.height), n).z;
+                            colFilter = GetCUBEConvolution(tmpCube, GetFilterCUBEVec(GetUV((size-1) - x, y, size, size), n), range, power);
+
                             tmpFilterCube.SetPixel((CubemapFace)n, x, y, colFilter);
                         }
                     }
                 }
+                tmpFilterCube.Apply();
+                CUBE2CUBE (tmpFilterCube, filterCube);
             }
             
-            tmpFilterCube.Apply();
-            CUBE2CUBE (tmpFilterCube, filterCube);
+            
             return true;
         }
         else {
